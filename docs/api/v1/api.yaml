@@ -65,8 +65,8 @@ paths:
 
   /api/v1/topology/{log_id}:
     get:
-      summary: Получение топологии по логу
-      description: Возвращает список узлов и связей (групп топологии) для конкретного лога.
+      summary: Получение дерева оборудования (инвентаризация)
+      description: Возвращает иерархический список всех узлов (коммутаторов и хостов) с их метаданными для конкретной сессии парсинга.
       parameters:
         - $ref: '#/components/parameters/LogIdParam'
       responses:
@@ -274,15 +274,9 @@ components:
 
     TopologyResponse:
       type: object
+      description: Сводка инвентаризации оборудования (узлы + расширенные метрики).
       properties:
         nodes:
           type: array
           items:
             $ref: '#/components/schemas/Node'
-        edges:
-          type: array
-          items:
-            type: object
-            properties:
-              source_node_id: { type: string, format: uuid }
-              target_node_id: { type: string, format: uuid }
