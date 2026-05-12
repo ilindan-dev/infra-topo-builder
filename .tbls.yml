@@ -1,5 +1,9 @@
 dsn: env://DATABASE_URL
 docPath: docs/db
 
+er:
+  format: svg
+  distance: 2
+
 format:
-  name: out
+  name: markdown

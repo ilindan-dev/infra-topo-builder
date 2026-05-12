@@ -12,11 +12,11 @@ MAIN_PATH=$(SUFFIX_SERVICE)/cmd/builder/main.go
 
 .PHONY: build
 build:
-	go build -o $(BIN_DIR)/$(APP_NAME) $(MAIN_PATH)
+	go build -C $(SUFFIX_SERVICE) -o ../$(BIN_DIR)/$(APP_NAME) cmd/builder/main.go
 
 .PHONY: run
 run:
-	go run $(MAIN_PATH)
+	go run -C $(SUFFIX_SERVICE) cmd/builder/main.go
 
 .PHONY: unit-test
 unit-test:
