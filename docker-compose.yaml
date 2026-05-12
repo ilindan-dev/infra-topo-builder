@@ -21,12 +21,9 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: builder/Dockerfile
-    container_name: parser_app
-    restart: unless-stopped
-    env_file:
-      - .env
+      context: ./builder
+      dockerfile: Dockerfile
+    container_name: parser_a
     environment:
       DB_HOST: db
       DATABASE_URL: "postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable"
