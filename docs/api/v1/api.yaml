@@ -1,9 +1,288 @@
 openapi: 3.1.0
+
 info:
-  title: Title
-  description: Title
+  title: InfraTopoBuilderAPI
+  description: Сервис построения топологии сети на основе данных, получаемых через монтируемую папку, агрегации данных и 
+    предоставления REST API.
   version: 1.0.0
+
 servers:
-  - url: 'https'
+  - url: 'http://localhost:{port}'
+    variables:
+      port:
+        default: '8080'
+        descriptions: Порт приложения
+
 paths:
-  
+  /ping:
+    get:
+      summary: Healthcheck сервиса
+      description: Проверка работоспособности HTTP-сервера.
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+
+  /api/v1/parse/:
+    post:
+      summary: Инициация парсинга лога
+      description: Принимает путь до локального архива (внутри монтированной папки data/), инициирует асинхронный парсинг.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filepath:
+                  type: string
+                  example: "data/logs_archive.zip"
+                  description: Относительный путь к архиву с логами
+              required:
+                - filepath
+      responses:
+        '202':
+          description: Файл принят в обработку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParseResponse'
+        '400':
+          description: Неверный формат тела запроса
+        '404':
+          description: Файл по указанному пути не найден на диске
+        '422':
+          description: Указанный файл не является поддерживаемым архивом
+        '500':
+          description: Внутренняя ошибка сервера (например, недоступна БД)
+
+  /api/v1/topology/{log_id}:
+    get:
+      summary: Получение топологии по логу
+      description: Возвращает список узлов и связей (групп топологии) для конкретного лога.
+      parameters:
+        - $ref: '#/components/parameters/LogIdParam'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopologyResponse'
+        '404':
+          description: Лог не найден
+        '500':
+          description: Внутренняя ошибка сервера (например, недоступна БД)
+
+  /api/v1/node/{node_id}:
+    get:
+      summary: Детали узла
+      description: Детальная информация об узле системы. Для коммутаторов включает дополнительные метрики.
+      parameters:
+        - $ref: '#/components/parameters/NodeIdParam'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Node'
+        '404':
+          description: Узел не найден
+        '500':
+          description: Внутренняя ошибка сервера (например, недоступна БД)
+
+  # По заданию путь определен именно с port, хоть и подразумевается отдача списка всех портов
+  /api/v1/port/{node_id}:
+    get:
+      summary: Порты узла
+      description: Получение списка всех портов, принадлежащих конкретному узлу.
+      parameters:
+        - $ref: '#/components/parameters/NodeIdParam'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Port'
+        '404':
+          description: Узел не найден
+        '500':
+          description: Внутренняя ошибка сервера (например, недоступна БД)
+
+  /api/v1/log/{log_id}:
+    get:
+      summary: Мета-информация о логе
+      description: Статус обработки, количество узлов, портов и дата загрузки.
+      parameters:
+        - $ref: '#/components/parameters/LogIdParam'
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogMeta'
+        '404':
+          description: Лог не найден
+        '500':
+          description: Внутренняя ошибка сервера (например, недоступна БД)
+
+components:
+  parameters:
+    LogIdParam:
+      name: log_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    NodeIdParam:
+      name: node_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ParseResponse:
+      type: object
+      properties:
+        log_id:
+          type: string
+          format: uuid
+      required:
+        - log_id
+
+    LogMeta:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, in_progress, success, error]
+        nodes_count:
+          type: integer
+        ports_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - status
+
+    Node:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        log_id: { type: string, format: uuid }
+        node_desc: { type: string, example: "SWITCH_1" }
+        num_ports: { type: integer }
+        node_type:
+          type: string
+          enum: [ host, switch ]
+          description: "Тип оборудования"
+        class_version: { type: integer }
+        base_version: { type: integer }
+        system_image_guid: { type: string }
+        node_guid: { type: string }
+        port_guid: { type: string }
+        info:
+          $ref: '#/components/schemas/NodeInfo'
+          description: Метаданные устройства (добавляются из sharp_an_info, если есть)
+        switch_info:
+          $ref: '#/components/schemas/Switch'
+          description: Специфичные метрики коммутатора (присутствует только если node_type == switch)
+      required:
+        - id
+        - node_guid
+
+    Switch:
+      type: object
+      description: Телеметрия и аппаратные возможности коммутатора
+      properties:
+        linear_fdb_cap: { type: integer }
+        random_fdb_cap: { type: integer }
+        mcast_fdb_cap: { type: integer }
+        linear_fdb_top: { type: integer }
+        def_port: { type: integer }
+        def_mcast_pri_port: { type: integer }
+        def_mcast_not_pri_port: { type: integer }
+        life_time_value: { type: integer }
+        port_state_change: { type: integer }
+        optimized_slvl_mapping: { type: integer }
+        lids_per_port: { type: integer }
+        part_enf_cap: { type: integer }
+        inb_enf_cap: { type: integer }
+        outb_enf_cap: { type: integer }
+        filter_raw_inb_cap: { type: integer }
+        filter_raw_outb_cap: { type: integer }
+        enp0: { type: integer }
+        mcast_fdb_top: { type: integer }
+
+    Port:
+      type: object
+      description: Полный набор метрик InfiniBand порта
+      properties:
+        id: { type: string, format: uuid }
+        node_id: { type: string, format: uuid }
+        port_num: { type: integer }
+        node_guid: { type: string }
+        port_guid: { type: string }
+        m_key: { type: string }
+        gid_prfx: { type: string }
+        lid: { type: integer }
+        msm_lid: { type: integer }
+        cap_msk: { type: integer }
+        link_speed_actv: { type: integer }
+        link_width_actv: { type: integer }
+        port_state: { type: integer }
+        port_phy_state: { type: integer }
+        resp_time_value: { type: string }
+        link_round_trip_latency: { type: string }
+        cap_msk2: { type: string }
+        fec_actv: { type: string }
+        retrans_actv: { type: string }
+      required:
+        - id
+        - port_num
+
+    NodeInfo:
+      type: object
+      properties:
+        serial_number: { type: string }
+        part_number: { type: string }
+        revision: { type: string }
+        product_name: { type: string }
+        endianness: { type: integer }
+        enable_endianness_per_job: { type: integer }
+        reproducibility_disable: { type: integer }
+
+    TopologyResponse:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Node'
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              source_node_id: { type: string, format: uuid }
+              target_node_id: { type: string, format: uuid }
