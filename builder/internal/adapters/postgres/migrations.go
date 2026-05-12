@@ -1,3 +1,4 @@
+// Package postgres provides PostgreSQL adapters and helpers for database migrations and repository implementations.
 package postgres
 
 import (
