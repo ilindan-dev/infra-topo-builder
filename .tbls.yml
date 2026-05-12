@@ -1,0 +1,5 @@
+dsn: env://DATABASE_URL
+docPath: docs/db
+
+format:
+  name: out

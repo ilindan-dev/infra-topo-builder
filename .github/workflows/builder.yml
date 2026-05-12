@@ -1,0 +1,39 @@
+name: CI/CD Builder Pipeline
+
+on:
+  push:
+    branches: [ "dev", "main" ]
+  pull_request:
+    branches: [ "dev", "main" ]
+
+jobs:
+  lint-and-test:
+    name: Build, Lint and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.26'
+          cache: true
+
+      - name: Build
+        run: make build
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          working-directory: ./builder
+
+      - name: Run Unit Tests
+        run: make unit-test
+
+#      - name: Build Test Container
+#        run: docker build -t tests:latest -f tests/Dockerfile .
+
+#      - name: Run Integration Tests
+#        run: make run-tests
