@@ -1,28 +1,42 @@
 services:
   db:
     image: postgres:15-alpine
+    container_name: parser_db
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: parser_db
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d parser_db"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   app:
-    build: .
-    ports:
-      - "8080:8080"
+    build:
+      context: .
+      dockerfile: builder/Dockerfile
+    container_name: parser_app
+    restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgres://postgres:password@db:5432/parser_db?sslmode=disable
-      - PORT=8080
-      - LOG_LEVEL=info
+      DB_HOST: db
+      DATABASE_URL: "postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}?sslmode=disable"
+    ports:
+      - "${PORT:-8080}:${PORT:-8080}"
     volumes:
-      - ./data:/app/data # F-1: Монтированная папка data/
+      - ./data:/app/data
     depends_on:
       db:
         condition: service_healthy
+
+volumes:
+  pg_data:
