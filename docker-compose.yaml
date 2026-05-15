@@ -36,6 +36,70 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      fluent-bit:
+        condition: service_started
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: "app"
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.93.0
+    container_name: parser_vm
+    restart: unless-stopped
+    ports:
+      - "8428:8428"
+    command:
+      - '--promscrape.config=/etc/victoriametrics/single-node-config.yaml'
+      - '--retentionPeriod=14d'
+    volumes:
+      - vm_data:/victoria-metrics-data
+      - ./infrastructure/monitoring/victoriametrics/single-node-config.yaml:/etc/victoriametrics/single-node-config.yaml
+
+  victorialogs:
+    image: victoriametrics/victoria-logs:latest
+    container_name: parser_vl
+    restart: unless-stopped
+    ports:
+      - "9428:9428"
+    command:
+      - '-retentionPeriod=7d'
+    volumes:
+      - vl_data:/victoria-logs-data
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: parser_grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_AUTH_ANONYMOUS_ENABLED=${GRAFANA_ANONYMOUS_ENABLED:-false}
+      - GF_INSTALL_PLUGINS=victoriametrics-logs-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/datasources:/etc/grafana/provisioning/datasources
+      - ./infrastructure/monitoring/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infrastructure/monitoring/dashboards:/var/lib/grafana/dashboards
+
+  fluent-bit:
+    image: fluent/fluent-bit:latest
+    container_name: parser_fluentbit
+    restart: unless-stopped
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    volumes:
+      - ./infrastructure/monitoring/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+    depends_on:
+      - victorialogs
 
 volumes:
   pg_data:
+  vm_data:
+  vl_data:
+  grafana_data:

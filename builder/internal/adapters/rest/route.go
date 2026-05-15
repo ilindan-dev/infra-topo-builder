@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/ilindan-dev/infra-topo-builder/builder/internal/adapters/rest/middleware"
 	"github.com/ilindan-dev/infra-topo-builder/builder/internal/config"
 )
@@ -29,7 +30,9 @@ func SetupRoutes(h *APIHandler, cfg *config.Config, logger *slog.Logger) http.Ha
 	mux.HandleFunc("GET /api/v1/node/{node_id}", h.GetNode)
 	mux.HandleFunc("GET /api/v1/port/{node_id}", h.GetPorts)
 	mux.HandleFunc("GET /api/v1/log/{log_id}", h.GetLogInfo)
-
+	mux.HandleFunc("GET /metrics", func(w http.ResponseWriter, r *http.Request) {
+		metrics.WritePrometheus(w, true)
+	})
 	mux.HandleFunc("GET /ping", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
