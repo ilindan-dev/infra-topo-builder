@@ -3,9 +3,13 @@ module github.com/ilindan-dev/infra-topo-builder/builder
 go 1.26.2
 
 require (
+	github.com/VictoriaMetrics/metrics v1.43.2
 	github.com/golang-migrate/migrate/v4 v4.19.1
+	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
+	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
 	github.com/jackc/pgx/v5 v5.9.2
+	golang.org/x/time v0.12.0
 )
 
 require (
@@ -17,7 +21,10 @@ require (
 	github.com/kr/text v0.1.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
+	github.com/valyala/fastrand v1.1.0 // indirect
+	github.com/valyala/histogram v1.2.0 // indirect
 	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect

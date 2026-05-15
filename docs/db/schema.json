@@ -1,0 +1,992 @@
+{
+  "name": "topo",
+  "tables": [
+    {
+      "name": "public.schema_migrations",
+      "type": "BASE TABLE",
+      "columns": [
+        {
+          "name": "version",
+          "type": "bigint",
+          "nullable": false
+        },
+        {
+          "name": "dirty",
+          "type": "boolean",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "schema_migrations_pkey",
+          "def": "CREATE UNIQUE INDEX schema_migrations_pkey ON public.schema_migrations USING btree (version)",
+          "table": "public.schema_migrations",
+          "columns": [
+            "version"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "schema_migrations_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (version)",
+          "table": "public.schema_migrations",
+          "referenced_table": "",
+          "columns": [
+            "version"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.logs",
+      "type": "BASE TABLE",
+      "comment": "Журнал сессий парсинга файлов топологии ibdiagnet",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "status",
+          "type": "log_status",
+          "nullable": false,
+          "default": "'pending'::log_status",
+          "comment": "Текущий статус обработки лога"
+        },
+        {
+          "name": "nodes_count",
+          "type": "integer",
+          "nullable": false,
+          "default": "0",
+          "comment": "Агрегированное количество успешно распарсенных узлов"
+        },
+        {
+          "name": "ports_count",
+          "type": "integer",
+          "nullable": false,
+          "default": "0",
+          "comment": "Агрегированное количество успешно распарсенных портов"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false,
+          "default": "now()"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "logs_pkey",
+          "def": "CREATE UNIQUE INDEX logs_pkey ON public.logs USING btree (id)",
+          "table": "public.logs",
+          "columns": [
+            "id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "logs_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.logs",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.nodes",
+      "type": "BASE TABLE",
+      "comment": "Узлы топологии (коммутаторы и хосты)",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "log_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "node_desc",
+          "type": "text",
+          "nullable": false,
+          "comment": "Словесное описание узла (например, \"SWITCH_1\" или \"HOST_2\")"
+        },
+        {
+          "name": "num_ports",
+          "type": "integer",
+          "nullable": false,
+          "comment": "Количество портов, заявленное на узле"
+        },
+        {
+          "name": "node_type",
+          "type": "node_kind",
+          "nullable": false,
+          "comment": "Тип сетевого оборудования (host или switch)"
+        },
+        {
+          "name": "class_version",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "base_version",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "system_image_guid",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "node_guid",
+          "type": "text",
+          "nullable": false,
+          "comment": "Глобальный уникальный идентификатор узла (GUID)"
+        },
+        {
+          "name": "port_guid",
+          "type": "text",
+          "nullable": false
+        }
+      ],
+      "indexes": [
+        {
+          "name": "nodes_pkey",
+          "def": "CREATE UNIQUE INDEX nodes_pkey ON public.nodes USING btree (id)",
+          "table": "public.nodes",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "nodes_log_id_node_guid_key",
+          "def": "CREATE UNIQUE INDEX nodes_log_id_node_guid_key ON public.nodes USING btree (log_id, node_guid)",
+          "table": "public.nodes",
+          "columns": [
+            "log_id",
+            "node_guid"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "nodes_log_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (log_id) REFERENCES logs(id) ON DELETE CASCADE",
+          "table": "public.nodes",
+          "referenced_table": "public.logs",
+          "columns": [
+            "log_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "nodes_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.nodes",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "nodes_log_id_node_guid_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (log_id, node_guid)",
+          "table": "public.nodes",
+          "referenced_table": "",
+          "columns": [
+            "log_id",
+            "node_guid"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.ports",
+      "type": "BASE TABLE",
+      "comment": "Информационная сводка по всем портам InfiniBand, принадлежащим узлам",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "node_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "node_guid",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "port_guid",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "port_num",
+          "type": "integer",
+          "nullable": false,
+          "comment": "Порядковый номер порта на узле"
+        },
+        {
+          "name": "m_key",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "gid_prfx",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "msm_lid",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "lid",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "cap_msk",
+          "type": "bigint",
+          "nullable": true,
+          "comment": "Битовая маска возможностей (Capability Mask)"
+        },
+        {
+          "name": "m_key_lease_period",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "diag_code",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "link_width_actv",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "link_width_sup",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "link_width_en",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "local_port_num",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "link_speed_en",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "link_speed_actv",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "lmc",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "m_key_prot_bits",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "link_down_def_state",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "port_phy_state",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "port_state",
+          "type": "integer",
+          "nullable": true,
+          "comment": "Текущее логическое состояние порта (например, Active, Down)"
+        },
+        {
+          "name": "link_speed_sup",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "vl_arb_high_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "vl_high_limit",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "init_type",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "vl_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "msmsl",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "nmtu",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "filter_raw_outb",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "filter_raw_inb",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "part_enf_outb",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "part_enf_inb",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "op_vls",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "hoq_life",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "vl_stall_cnt",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "mtu_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "init_type_reply",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "vl_arb_low_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "p_key_violations",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "m_key_violations",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "subn_tmo",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "multicast_p_key_trap_suppression_enabled",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "client_reregister",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "guid_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "q_key_violations",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "max_credit_hint",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "overrun_errs",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "local_phy_error",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "resp_time_value",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "link_round_trip_latency",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "ooo_sl_mask",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "cap_msk2",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "fec_actv",
+          "type": "text",
+          "nullable": true,
+          "comment": "Forward Error Correction (строка, может содержать \"N/A\")"
+        },
+        {
+          "name": "retrans_actv",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "ports_pkey",
+          "def": "CREATE UNIQUE INDEX ports_pkey ON public.ports USING btree (id)",
+          "table": "public.ports",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "ports_node_id_port_num_key",
+          "def": "CREATE UNIQUE INDEX ports_node_id_port_num_key ON public.ports USING btree (node_id, port_num)",
+          "table": "public.ports",
+          "columns": [
+            "node_id",
+            "port_num"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "ports_node_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE",
+          "table": "public.ports",
+          "referenced_table": "public.nodes",
+          "columns": [
+            "node_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "ports_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.ports",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "ports_node_id_port_num_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (node_id, port_num)",
+          "table": "public.ports",
+          "referenced_table": "",
+          "columns": [
+            "node_id",
+            "port_num"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.nodes_info",
+      "type": "BASE TABLE",
+      "comment": "Агрегация дополнительных метаданных об узлах из файла .sharp_an_info",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "node_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "serial_number",
+          "type": "text",
+          "nullable": true,
+          "comment": "Серийный номер устройства"
+        },
+        {
+          "name": "part_number",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "revision",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "product_name",
+          "type": "text",
+          "nullable": true,
+          "comment": "Коммерческое название оборудования (например, Mellanox)"
+        },
+        {
+          "name": "endianness",
+          "type": "integer",
+          "nullable": true,
+          "comment": "Порядок следования байтов (обычно 0 - Little-Endian, 1 - Big-Endian)"
+        },
+        {
+          "name": "enable_endianness_per_job",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "reproducibility_disable",
+          "type": "integer",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "nodes_info_pkey",
+          "def": "CREATE UNIQUE INDEX nodes_info_pkey ON public.nodes_info USING btree (id)",
+          "table": "public.nodes_info",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "nodes_info_node_id_key",
+          "def": "CREATE UNIQUE INDEX nodes_info_node_id_key ON public.nodes_info USING btree (node_id)",
+          "table": "public.nodes_info",
+          "columns": [
+            "node_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "nodes_info_node_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE",
+          "table": "public.nodes_info",
+          "referenced_table": "public.nodes",
+          "columns": [
+            "node_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "nodes_info_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.nodes_info",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "nodes_info_node_id_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (node_id)",
+          "table": "public.nodes_info",
+          "referenced_table": "",
+          "columns": [
+            "node_id"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "public.switches",
+      "type": "BASE TABLE",
+      "comment": "Таблица для хранения сущностей коммутаторов. Связана с nodes.",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false,
+          "default": "uuid_generate_v4()"
+        },
+        {
+          "name": "node_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "node_guid",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "linear_fdb_cap",
+          "type": "integer",
+          "nullable": true,
+          "comment": "Лимит Linear FDB, может быть NULL если утилита вернула N/A"
+        },
+        {
+          "name": "random_fdb_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "mcast_fdb_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "linear_fdb_top",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "def_port",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "def_mcast_pri_port",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "def_mcast_not_pri_port",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "life_time_value",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "port_state_change",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "optimized_slvl_mapping",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "lids_per_port",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "part_enf_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "inb_enf_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "outb_enf_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "filter_raw_inb_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "filter_raw_outb_cap",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "enp0",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "mcast_fdb_top",
+          "type": "integer",
+          "nullable": true
+        }
+      ],
+      "indexes": [
+        {
+          "name": "switches_pkey",
+          "def": "CREATE UNIQUE INDEX switches_pkey ON public.switches USING btree (id)",
+          "table": "public.switches",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "switches_node_id_key",
+          "def": "CREATE UNIQUE INDEX switches_node_id_key ON public.switches USING btree (node_id)",
+          "table": "public.switches",
+          "columns": [
+            "node_id"
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "name": "switches_node_id_fkey",
+          "type": "FOREIGN KEY",
+          "def": "FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE",
+          "table": "public.switches",
+          "referenced_table": "public.nodes",
+          "columns": [
+            "node_id"
+          ],
+          "referenced_columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "switches_pkey",
+          "type": "PRIMARY KEY",
+          "def": "PRIMARY KEY (id)",
+          "table": "public.switches",
+          "referenced_table": "",
+          "columns": [
+            "id"
+          ]
+        },
+        {
+          "name": "switches_node_id_key",
+          "type": "UNIQUE",
+          "def": "UNIQUE (node_id)",
+          "table": "public.switches",
+          "referenced_table": "",
+          "columns": [
+            "node_id"
+          ]
+        }
+      ]
+    }
+  ],
+  "relations": [
+    {
+      "table": "public.nodes",
+      "columns": [
+        "log_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.logs",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (log_id) REFERENCES logs(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.ports",
+      "columns": [
+        "node_id"
+      ],
+      "cardinality": "zero_or_more",
+      "parent_table": "public.nodes",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.nodes_info",
+      "columns": [
+        "node_id"
+      ],
+      "cardinality": "zero_or_one",
+      "parent_table": "public.nodes",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE"
+    },
+    {
+      "table": "public.switches",
+      "columns": [
+        "node_id"
+      ],
+      "cardinality": "zero_or_one",
+      "parent_table": "public.nodes",
+      "parent_columns": [
+        "id"
+      ],
+      "parent_cardinality": "exactly_one",
+      "def": "FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE"
+    }
+  ],
+  "functions": [
+    {
+      "name": "public.uuid_nil",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_ns_dns",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_ns_url",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_ns_oid",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_ns_x500",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_generate_v1",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_generate_v1mc",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_generate_v3",
+      "return_type": "uuid",
+      "arguments": "namespace uuid, name text",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_generate_v4",
+      "return_type": "uuid",
+      "arguments": "",
+      "type": "FUNCTION"
+    },
+    {
+      "name": "public.uuid_generate_v5",
+      "return_type": "uuid",
+      "arguments": "namespace uuid, name text",
+      "type": "FUNCTION"
+    }
+  ],
+  "enums": [
+    {
+      "name": "public.log_status",
+      "values": [
+        "error",
+        "in_progress",
+        "pending",
+        "success"
+      ]
+    },
+    {
+      "name": "public.node_kind",
+      "values": [
+        "host",
+        "switch"
+      ]
+    }
+  ],
+  "driver": {
+    "name": "postgres",
+    "database_version": "PostgreSQL 15.17 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
+    "meta": {
+      "current_schema": "public",
+      "search_paths": [
+        "infra-topo-builder",
+        "public"
+      ],
+      "dict": {
+        "Functions": "Stored procedures and functions"
+      }
+    }
+  }
+}

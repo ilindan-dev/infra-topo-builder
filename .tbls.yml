@@ -1,4 +1,4 @@
-dsn: env://DATABASE_URL
+dsn: "${DATABASE_URL}"
 docPath: docs/db
 
 er:
