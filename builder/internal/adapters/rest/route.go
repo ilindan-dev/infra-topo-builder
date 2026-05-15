@@ -12,10 +12,10 @@ import (
 // chain applied to all routes. The function returns an http.Handler that can
 // be passed to an http.Server. Middleware order is intentional:
 //
-//   1. Recovery - outermost; recovers panics from any downstream layer
-//   2. WithLogger - records requests and responses for observability
-//   3. WithMetrics - collects latency/size/count/error metrics
-//   4. Rate - process-global request throttling
+//  1. Recovery - outermost; recovers panics from any downstream layer
+//  2. WithLogger - records requests and responses for observability
+//  3. WithMetrics - collects latency/size/count/error metrics
+//  4. Rate - process-global request throttling
 //
 // The registered endpoints are documented in package doc.go. The mux uses
 // simple patterns; if path parameter parsing is required by the router, it
