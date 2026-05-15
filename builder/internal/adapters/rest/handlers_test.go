@@ -17,6 +17,8 @@ import (
 	"github.com/ilindan-dev/infra-topo-builder/builder/internal/core/domain"
 )
 
+// --- MOCKS ---
+
 type mockBuilder struct {
 	mockBuild func(ctx context.Context, filepath string) (uuid.UUID, error)
 }
@@ -65,6 +67,8 @@ func (m *mockReader) GetLogStatus(ctx context.Context, logID uuid.UUID) (domain.
 	return m.mockGetLogStatus(ctx, logID)
 }
 
+// --- HELPER ---
+
 func setupTestMux(b *mockBuilder, r *mockReader) *http.ServeMux {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	handler := rest.NewAPIHandler(b, r, logger)
@@ -77,6 +81,8 @@ func setupTestMux(b *mockBuilder, r *mockReader) *http.ServeMux {
 	mux.HandleFunc("GET /api/v1/log/{log_id}", handler.GetLogInfo)
 	return mux
 }
+
+// --- TESTS ---
 
 // TestParseLog verifies the ParseLog endpoint processes valid JSON payloads, rejects malformed
 // or empty requests, and translates builder errors into appropriate HTTP statuses.
