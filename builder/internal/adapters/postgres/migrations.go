@@ -1,4 +1,3 @@
-// Package postgres provides PostgreSQL adapters and helpers for database migrations and repository implementations.
 package postgres
 
 import (
@@ -20,8 +19,17 @@ import (
 //go:embed migrations/*.sql
 var migrationFiles embed.FS
 
-// Migrate updates the database schema to the latest version using the go-migrate turn.
-// Returns an error if the migration could not be applied.
+// Migrate applies embedded SQL migrations (migrations/*.sql) to the
+// provided Postgres database using golang-migrate. The function expects a
+// pgx connection pool and temporarily opens a database/sql wrapper to create
+// a migration driver instance. Migration files are embedded into the binary
+// via go:embed and are applied in ascending filename order.
+//
+// Behavior notes:
+//   - If there are no pending migrations, migrate returns migrate.ErrNoChange
+//     which is treated as a success (no-op).
+//   - Any other error during migration is returned after logging for
+//     observability.
 func Migrate(pool *pgxpool.Pool, logger *slog.Logger) error {
 	log := logger.With("adapter", "postgres", "function", "Migrate")
 	log.Debug("running migration")

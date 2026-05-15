@@ -11,14 +11,24 @@ EXTENSION IF NOT EXISTS "uuid-ossp";
  * @typedef {ENUM} log_status
  * @description Статус обработки сессии парсинга лога
  */
-CREATE TYPE log_status AS ENUM ('pending', 'in_progress', 'success', 'error');
+CREATE TYPE log_status AS ENUM
+(
+    'pending',
+    'in_progress',
+    'success',
+    'error'
+);
 
 /**
  * @category Dictionary
  * @typedef {ENUM} node_kind
  * @description Тип сетевого оборудования (хост 'host' или свитч 'switch')
  */
-CREATE TYPE node_kind AS ENUM ('host', 'switch');
+CREATE TYPE node_kind AS ENUM
+(
+    'host',
+    'switch'
+);
 
 ------------------------------------------------------------------------------------------------------------------------
 -- SECTION: [TABLES]
@@ -32,7 +42,7 @@ CREATE TYPE node_kind AS ENUM ('host', 'switch');
  */
 CREATE TABLE logs
 (
-    id          UUID PRIMARY KEY                  DEFAULT uuid_generate_v4(),
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     status      log_status               NOT NULL DEFAULT 'pending',
     nodes_count INT                      NOT NULL DEFAULT 0,
     ports_count INT                      NOT NULL DEFAULT 0,
@@ -40,13 +50,13 @@ CREATE TABLE logs
 );
 
 COMMENT
-ON TABLE logs IS 'Журнал сессий парсинга файлов топологии ibdiagnet';
+    ON TABLE logs IS 'Журнал сессий парсинга файлов топологии ibdiagnet';
 COMMENT
-ON COLUMN logs.status IS 'Текущий статус обработки лога';
+    ON COLUMN logs.status IS 'Текущий статус обработки лога';
 COMMENT
-ON COLUMN logs.nodes_count IS 'Агрегированное количество успешно распарсенных узлов';
+    ON COLUMN logs.nodes_count IS 'Агрегированное количество успешно распарсенных узлов';
 COMMENT
-ON COLUMN logs.ports_count IS 'Агрегированное количество успешно распарсенных портов';
+    ON COLUMN logs.ports_count IS 'Агрегированное количество успешно распарсенных портов';
 
 ------------------------------------------------------------------------------------------------------------------------
 
@@ -71,15 +81,15 @@ CREATE TABLE nodes
 );
 
 COMMENT
-ON TABLE nodes IS 'Узлы топологии (коммутаторы и хосты)';
+    ON TABLE nodes IS 'Узлы топологии (коммутаторы и хосты)';
 COMMENT
-ON COLUMN nodes.node_desc IS 'Словесное описание узла (например, "SWITCH_1" или "HOST_2")';
+    ON COLUMN nodes.node_desc IS 'Словесное описание узла (например, "SWITCH_1" или "HOST_2")';
 COMMENT
-ON COLUMN nodes.num_ports IS 'Количество портов, заявленное на узле';
+    ON COLUMN nodes.num_ports IS 'Количество портов, заявленное на узле';
 COMMENT
-ON COLUMN nodes.node_type IS 'Тип сетевого оборудования (host или switch)';
+    ON COLUMN nodes.node_type IS 'Тип сетевого оборудования (host или switch)';
 COMMENT
-ON COLUMN nodes.node_guid IS 'Глобальный уникальный идентификатор узла (GUID)';
+    ON COLUMN nodes.node_guid IS 'Глобальный уникальный идентификатор узла (GUID)';
 
 ------------------------------------------------------------------------------------------------------------------------
 
@@ -150,15 +160,15 @@ CREATE TABLE ports
 );
 
 COMMENT
-ON TABLE ports IS 'Информационная сводка по всем портам InfiniBand, принадлежащим узлам';
+    ON TABLE ports IS 'Информационная сводка по всем портам InfiniBand, принадлежащим узлам';
 COMMENT
-ON COLUMN ports.port_num IS 'Порядковый номер порта на узле';
+    ON COLUMN ports.port_num IS 'Порядковый номер порта на узле';
 COMMENT
-ON COLUMN ports.cap_msk IS 'Битовая маска возможностей (Capability Mask)';
+    ON COLUMN ports.cap_msk IS 'Битовая маска возможностей (Capability Mask)';
 COMMENT
-ON COLUMN ports.port_state IS 'Текущее логическое состояние порта (например, Active, Down)';
+    ON COLUMN ports.port_state IS 'Текущее логическое состояние порта (например, Active, Down)';
 COMMENT
-ON COLUMN ports.fec_actv IS 'Forward Error Correction (строка, может содержать "N/A")';
+    ON COLUMN ports.fec_actv IS 'Forward Error Correction (строка, может содержать "N/A")';
 
 ------------------------------------------------------------------------------------------------------------------------
 
@@ -181,13 +191,13 @@ CREATE TABLE nodes_info
 );
 
 COMMENT
-ON TABLE nodes_info IS 'Агрегация дополнительных метаданных об узлах из файла .sharp_an_info';
+    ON TABLE nodes_info IS 'Агрегация дополнительных метаданных об узлах из файла .sharp_an_info';
 COMMENT
-ON COLUMN nodes_info.serial_number IS 'Серийный номер устройства';
+    ON COLUMN nodes_info.serial_number IS 'Серийный номер устройства';
 COMMENT
-ON COLUMN nodes_info.product_name IS 'Коммерческое название оборудования (например, Mellanox)';
+    ON COLUMN nodes_info.product_name IS 'Коммерческое название оборудования (например, Mellanox)';
 COMMENT
-ON COLUMN nodes_info.endianness IS 'Порядок следования байтов (обычно 0 - Little-Endian, 1 - Big-Endian)';
+    ON COLUMN nodes_info.endianness IS 'Порядок следования байтов (обычно 0 - Little-Endian, 1 - Big-Endian)';
 
 -----------------------------------------------------------------------------------------------------------------------
 
@@ -222,6 +232,6 @@ CREATE TABLE switches
 );
 
 COMMENT
-ON TABLE switches IS 'Таблица для хранения сущностей коммутаторов. Связана с nodes.';
+    ON TABLE switches IS 'Таблица для хранения сущностей коммутаторов. Связана с nodes.';
 COMMENT
-ON COLUMN switches.linear_fdb_cap IS 'Лимит Linear FDB, может быть NULL если утилита вернула N/A';
+    ON COLUMN switches.linear_fdb_cap IS 'Лимит Linear FDB, может быть NULL если утилита вернула N/A';
