@@ -15,6 +15,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/ilindan-dev/infra-topo-builder/builder/internal/adapters/parser"
+	"github.com/ilindan-dev/infra-topo-builder/builder/internal/adapters/rest"
+	"github.com/ilindan-dev/infra-topo-builder/builder/internal/service"
+
 	"github.com/ilindan-dev/infra-topo-builder/builder/internal/adapters/postgres"
 	"github.com/ilindan-dev/infra-topo-builder/builder/internal/config"
 )
@@ -57,8 +61,19 @@ func run(cfg *config.Config, logger *slog.Logger) error {
 		return err
 	}
 
+	parserWriter := postgres.NewParserWriter(pgxPool, logger)
+	topologyReader := postgres.NewTopologyReader(pgxPool, logger)
+
+	fileParser := parser.NewParser(parserWriter, cfg.BatchSize, logger)
+
+	builderService := service.NewBuilder(parserWriter, fileParser, logger)
+
+	apiHandler := rest.NewAPIHandler(builderService, topologyReader, logger)
+	router := rest.SetupRoutes(apiHandler, cfg, logger)
+
 	server := http.Server{
 		Addr:         ":" + cfg.HTTPConfig.Port,
+		Handler:      router,
 		ReadTimeout:  cfg.HTTPConfig.ReadTimeout,
 		WriteTimeout: cfg.HTTPConfig.WriteTimeout,
 		IdleTimeout:  cfg.HTTPConfig.IdleTimeout,
