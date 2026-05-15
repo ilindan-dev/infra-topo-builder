@@ -1,0 +1,22 @@
+-- name: InsertPorts :copyfrom
+INSERT INTO ports (node_id, node_guid, port_guid, port_num, m_key, gid_prfx, msm_lid, lid,
+                   cap_msk, m_key_lease_period, diag_code, link_width_actv, link_width_sup,
+                   link_width_en, local_port_num, link_speed_en, link_speed_actv, lmc,
+                   m_key_prot_bits, link_down_def_state, port_phy_state, port_state,
+                   link_speed_sup, vl_arb_high_cap, vl_high_limit, init_type, vl_cap, msmsl,
+                   nmtu, filter_raw_outb, filter_raw_inb, part_enf_outb, part_enf_inb, op_vls,
+                   hoq_life, vl_stall_cnt, mtu_cap, init_type_reply, vl_arb_low_cap,
+                   p_key_violations, m_key_violations, subn_tmo,
+                   multicast_p_key_trap_suppression_enabled, client_reregister, guid_cap,
+                   q_key_violations, max_credit_hint, overrun_errs, local_phy_error,
+                   resp_time_value, link_round_trip_latency, ooo_sl_mask, cap_msk2, fec_actv,
+                   retrans_actv)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+        $10, $11, $12, $13, $14, $15,
+        $16, $17, $18, $19, $20, $21,
+        $22, $23, $24, $25, $26, $27, $28, $29,
+        $30, $31, $32, $33, $34, $35, $36,
+        $37, $38, $39, $40, $41, $42,
+        $43, $44, $45, $46, $47,
+        $48, $49, $50, $51, $52, $53,
+        $54, $55);

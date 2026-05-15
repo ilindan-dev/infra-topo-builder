@@ -12,11 +12,11 @@ MAIN_PATH=$(SUFFIX_SERVICE)/cmd/builder/main.go
 
 .PHONY: build
 build:
-	go build -o $(BIN_DIR)/$(APP_NAME) $(MAIN_PATH)
+	go build -C $(SUFFIX_SERVICE) -o ../$(BIN_DIR)/$(APP_NAME) cmd/builder/main.go
 
 .PHONY: run
 run:
-	go run $(MAIN_PATH)
+	go run -C $(SUFFIX_SERVICE) cmd/builder/main.go
 
 .PHONY: unit-test
 unit-test:
@@ -31,9 +31,15 @@ lint:
 db-gen:
 	make -C $(SUFFIX_SERVICE) db-gen
 
-.PHONY: compose-up
-compose-up:
+# --- DOCKER ---
+
+.PHONY: compose-up-db
+compose-up-db:
 	$(container_runtime) compose up -d db
+
+.PHONY: compose-up-all
+compose-up-all:
+	$(container_runtime) compose up -d --build
 
 .PHONY: compose-down
 compose-down:
@@ -54,6 +60,7 @@ install-tools:
 	make install-tools-ci
 	@echo "Tools installed successfully!"
 
+# --- DATABASE ---
 .PHONY: gen-docs-database
 gen-docs-database:
 	@echo "Generating documentation for database..."
@@ -63,6 +70,12 @@ gen-docs-database:
 db-migrate-create:
 	migrate create -ext sql -dir $(SUFFIX_SERVICE)/internal/adapters/postgres/migrations -seq $(name)
 
+# --- TESTS ---
+
+PHONY: build-tests
+build-tests:
+	$(container_runtime) build -t tests:latest -f tests/Dockerfile .
+
 .PHONY: run-tests
-run-tests:
-	${container_runtime} run --rm --network=host tests:latest
+run-tests: build-tests
+	$(container_runtime) run --rm --network=host tests:latest

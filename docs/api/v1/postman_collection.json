@@ -1,0 +1,245 @@
+{
+  "info": {
+    "name": "InfraTopoBuilder API (Auto-Tests)",
+    "description": "Коллекция с автоматическим извлечением переменных (log_id, node_id) и проверкой статус-кодов.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Healthcheck (Ping)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/ping",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "ping"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Инициация парсинга (Parse)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 202 Accepted\", function () {",
+              "    pm.response.to.have.status(202);",
+              "});",
+              "",
+              "// Автоматически сохраняем log_id для следующих запросов",
+              "if (pm.response.code === 202) {",
+              "    var jsonData = pm.response.json();",
+              "    pm.collectionVariables.set(\"log_id\", jsonData.log_id);",
+              "    console.log(\"Saved log_id: \" + jsonData.log_id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"filepath\": \"data/log.zip\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/parse/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "parse",
+            ""
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Статус лога (Get Log Info)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var jsonData = pm.response.json();",
+              "pm.test(\"Status should eventually be 'success'\", function () {",
+              "    pm.expect(jsonData.status).to.be.oneOf(['pending', 'in_progress', 'success']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/log/{{log_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "log",
+            "{{log_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Получение топологии (Get Topology)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Автоматически берем ID первого узла и сохраняем как node_id",
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    if (jsonData.Nodes && jsonData.Nodes.length > 0) {",
+              "        pm.collectionVariables.set(\"node_id\", jsonData.Nodes[0].id);",
+              "        console.log(\"Saved node_id: \" + jsonData.Nodes[0].id);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/topology/{{log_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "topology",
+            "{{log_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Детали узла (Get Node)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/node/{{node_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "node",
+            "{{node_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Порты узла (Get Ports)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/port/{{node_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "port",
+            "{{node_id}}"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "log_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "node_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
